@@ -13,8 +13,9 @@ type Context struct {
 	Writer http.ResponseWriter
 	Req    *http.Request
 	// 请求信息
-	Path   string
+	Path   string // 请求路由
 	Method string
+	Params map[string]string // 路由参数
 	// 返回信息
 	StatusCode int
 }
@@ -27,6 +28,13 @@ func newContext(w http.ResponseWriter, r *http.Request) *Context {
 		Path:   r.URL.Path,
 		Method: r.Method,
 	}
+}
+
+// 根据 key 获取路由参数
+// 例如路由为："/abc/:name"，请求为 "/abc/John" c.Param("name") = John
+func (c *Context) Param(key string) string {
+	v, _ := c.Params[key]
+	return v
 }
 
 func (c *Context) PostForm(key string) string {
