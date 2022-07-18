@@ -25,6 +25,12 @@ func New() *Engine {
 	return engine
 }
 
+func Default() *Engine {
+	engine := New()
+	engine.Use(Recovery())
+	return engine
+}
+
 // 设置自定义渲染函数
 func (e *Engine) SetFuncMap(funcMap template.FuncMap) {
 	e.funcMap = funcMap
