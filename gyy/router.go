@@ -99,8 +99,12 @@ func (r *router) handle(c *Context) {
 		c.Params = params
 		// 执行该路由对应的处理函数，使用 pattern 即注册时的路由信息作为 key 而非访问时的路由信息作为 key
 		key := c.Method + "-" + n.pattern
-		r.handlers[key](c)
+		// 最后将要执行的处理函数也加入到中间件数组中，作为最后一个，这样才有先执行中间件Next()前部分 -> 处理函数 -> 中间件Next()后部分的效果
+		c.handlers = append(c.handlers, r.handlers[key])
 	} else {
-		c.String(http.StatusNotFound, "404 NOT FOUND: %s\n", c.Path)
+		c.handlers = append(c.handlers, func(c *Context) {
+			c.String(http.StatusNotFound, "404 NOT FOUND: %s\n", c.Path)
+		})
 	}
+	c.Next()
 }

@@ -18,6 +18,9 @@ type Context struct {
 	Params map[string]string // 路由参数
 	// 返回信息
 	StatusCode int
+	// 中间件
+	handlers []HandlerFunc // 存储注册的中间件
+	index    int           // 记录当前执行中间件顺序
 }
 
 // 初始化 context
@@ -27,7 +30,25 @@ func newContext(w http.ResponseWriter, r *http.Request) *Context {
 		Req:    r,
 		Path:   r.URL.Path,
 		Method: r.Method,
+		index:  -1,
 	}
+}
+
+// 执行下一个注册的中间件
+func (c *Context) Next() {
+	c.index++
+	s := len(c.handlers)
+	// 如果中间件中不手动执行 Next()，由于 for 中的 c.index++，也能执行完后续的中间件
+	for ; c.index < s; c.index++ {
+		c.handlers[c.index](c)
+	}
+}
+
+// 中断执行
+func (c *Context) Fail(code int, err string) {
+	// 赋为最大值，取消后续中间件执行
+	c.index = len(c.handlers)
+	c.JSON(code, H{"message": err})
 }
 
 // 根据 key 获取路由参数
