@@ -21,6 +21,8 @@ type Context struct {
 	// 中间件
 	handlers []HandlerFunc // 存储注册的中间件
 	index    int           // 记录当前执行中间件顺序
+	//
+	engine *Engine // 存储 engine 实例
 }
 
 // 初始化 context
@@ -95,8 +97,10 @@ func (c *Context) Data(code int, data []byte) {
 	c.Writer.Write(data)
 }
 
-func (c *Context) HTML(code int, html string) {
+func (c *Context) HTML(code int, name string, data interface{}) {
 	c.SetHeader("Content-Type", "text/html")
 	c.Status(code)
-	c.Writer.Write([]byte(html))
+	if err := c.engine.htmlTemplates.ExecuteTemplate(c.Writer, name, data); err != nil {
+		c.Fail(500, err.Error())
+	}
 }

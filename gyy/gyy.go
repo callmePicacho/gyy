@@ -1,6 +1,7 @@
 package gyy
 
 import (
+	"html/template"
 	"net/http"
 	"strings"
 )
@@ -10,8 +11,10 @@ type HandlerFunc func(*Context)
 
 // 实现 ServeHTTP 接口
 type Engine struct {
-	*RouterGroup                // 存储根分组
-	groups       []*RouterGroup // 存储全部分组
+	*RouterGroup                     // 存储根分组
+	groups        []*RouterGroup     // 存储全部分组
+	htmlTemplates *template.Template // 存储 HTML 模板
+	funcMap       template.FuncMap   // 存储自定义模板渲染函数
 }
 
 // 初始化 Engine
@@ -20,6 +23,16 @@ func New() *Engine {
 	engine := &Engine{RouterGroup: group, groups: []*RouterGroup{group}}
 	group.addEngine(engine)
 	return engine
+}
+
+// 设置自定义渲染函数
+func (e *Engine) SetFuncMap(funcMap template.FuncMap) {
+	e.funcMap = funcMap
+}
+
+// 加载模板
+func (e *Engine) LoadHTMLGlob(pattern string) {
+	e.htmlTemplates = template.Must(template.New("").Funcs(e.funcMap).ParseGlob(pattern))
 }
 
 // 启动 http
@@ -36,5 +49,6 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			c.handlers = append(c.handlers, group.middlewares...)
 		}
 	}
+	c.engine = e
 	e.handle(c)
 }

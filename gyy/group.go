@@ -1,6 +1,10 @@
 package gyy
 
-import "log"
+import (
+	"log"
+	"net/http"
+	"path"
+)
 
 // 路由分组
 type RouterGroup struct {
@@ -50,4 +54,28 @@ func (g *RouterGroup) GET(pattern string, handler HandlerFunc) {
 
 func (g *RouterGroup) POST(pattern string, handler HandlerFunc) {
 	g.addRoute("POST", pattern, handler)
+}
+
+func (g *RouterGroup) createStaticHandler(relativePath string, fs http.FileSystem) HandlerFunc {
+	absolutePath := path.Join(g.prefix, relativePath)
+	// 解析请求地址，映射到服务器上文件的真实地址，交给 http.FileServer 处理
+	fileServer := http.StripPrefix(absolutePath, http.FileServer(fs))
+	return func(c *Context) {
+		file := c.Param("filepath")
+		if _, err := fs.Open(file); err != nil {
+			c.Status(http.StatusNotFound)
+			return
+		}
+
+		fileServer.ServeHTTP(c.Writer, c.Req)
+	}
+}
+
+// 将磁盘上的文件夹 root 映射到路由 relativePath
+func (g *RouterGroup) Static(relativePath, root string) {
+	// 获取处理函数
+	handler := g.createStaticHandler(relativePath, http.Dir(root))
+	// 拼接路由名称
+	urlPattern := path.Join(relativePath, "/*filepath")
+	g.GET(urlPattern, handler)
 }
